@@ -249,8 +249,10 @@ async def question_answer(question: Question):
     # docs = knowledge_base.similarity_search(user_question)
     docs = vector_store.similarity_search(user_question)
     
+    bill = None
     with get_openai_callback() as cb:
         response = chain.run(input_documents=docs, question=user_question)
         print(cb)
+        bill = cb.total_cost
         
-    return {"response": response, "docs": docs}
+    return {"response": response, "docs": docs, "bill": bill}
