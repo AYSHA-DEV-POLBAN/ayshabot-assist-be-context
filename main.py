@@ -8,6 +8,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain_openai import OpenAI
+from langchain_openai import ChatOpenAI
 from langchain_community.callbacks import get_openai_callback
 import io
 from langchain_chroma import Chroma
@@ -237,22 +238,170 @@ async def delete_collection():
 
 @app.post("/question_answer/")
 async def question_answer(question: Question):
+
+    user_question = question.question
+    # llm = OpenAI()
+    llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
+    chain = load_qa_chain(llm, chain_type="stuff")
+
+    docs = vector_store.similarity_search(user_question)
+
+    prompt = f"""
+    Jawab semua pertanyaan menggunakan bahasa Indonesia. \
+    jangan lupa, Setiap jawaban wajib dan harus diakhiri dengan ucapan  'Terimakasih telah menghubungi Rumah Sakit Islam Aysha. \
+
+    Pertanyaan :  \
+    ```{user_question}```
+    """
+    
+    bill = None
+    with get_openai_callback() as cb:
+        response = chain.run(input_documents=docs, question=prompt)
+        print(cb)
+        bill = cb.total_cost
+        
+    return {"question":user_question, "response": response, "docs": docs, "bill": bill}
+
+
+# @app.post("/question_answer_basic_prompt/")
+# async def question_answer_basic_prompt(question: Question):
+
+#     user_question = question.question
+#     # llm = OpenAI()
+#     llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
+#     chain = load_qa_chain(llm, chain_type="stuff")
+
+#     docs = vector_store.similarity_search(user_question)
+
+#     from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate,PromptTemplate, HumanMessagePromptTemplate
+#     from langchain.chains import ConversationalRetrievalChain
+
+#     context = docs
+#     retriever = docs
+
+#     general_system_template = r""" 
+#     Use the following pieces of context to answer the question at the end. You have to utilize the context below to help you answer the question.
+#     You have to answer the user's question based on the given context. If the user's question is not covered by the context, do not answer questions outside the context.
+#     You have to engage in natural conversation (be friendly), greet in a formal style, and be friendly to every user question. Use a conversational style, as if discussing with a friend.
+#     Context is indicated by the symbol '---'.
+#      ----
+#     {context}
+#     ----
+
+#     Remember you should fully understand about the context. You should give very the best answer to every question
+#     Provide an answer in the same language as the question. You should analyze the language used in the user's question.
+#     """
+#     general_user_template = "Question:{user_question}"
+#     messages = [
+#                 SystemMessagePromptTemplate.from_template(general_system_template),
+#                 HumanMessagePromptTemplate.from_template(general_user_template)
+#     ]
+#     qa_prompt = ChatPromptTemplate.from_messages( messages )
+
+#     qa = ConversationalRetrievalChain.from_llm(llm, retriever=retriever, verbose=True, memory=memory,combine_docs_chain_kwargs={"prompt":qa_prompt})
+    
+#     # bill = None
+#     # with get_openai_callback() as cb:
+#     #     response = chain.run(input_documents=docs, question=user_question)
+#     #     print(cb)
+#     #     bill = cb.total_cost
+        
+#     return {"qa":qa,}
+#     # return {"question":question, "response": response, "docs": docs, "bill": bill}
+
+
+@app.post("/question_answe_with_prompt/")
+async def question_answer_with_prompt(question: Question):
     # if knowledge_base is None:
     #     return {"response": "Error! Knowledge base is not available yet. Please upload a file first."}
     
     # load_dotenv()
     user_question = question.question
-    llm = OpenAI()
+    # llm = OpenAI()
+    llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
     chain = load_qa_chain(llm, chain_type="stuff")
     
     # Fetch documents from knowledge base
     # docs = knowledge_base.similarity_search(user_question)
     docs = vector_store.similarity_search(user_question)
+    # docs = vector_store.similarity_search_with_score(user_question)
+    # docs = vector_store.similarity_search_with_relevance_scores(user_question)
+
+
+    # Tambahkan instruksi ke dalam pertanyaan pengguna
+    # prompt_with_instruction = (
+    #     "Jawab semua pertanyaan menggunakan bahasa Indonesia. "
+    #     "Jika jawaban tidak ditemukan dalam konteks, jangan coba-coba memberikan informasi lain. "
+    #     "Cukup jawab dengan apa yang ada dalam konteks dan pada kalimat terakhir tambahkan "
+    #     "\"apabila informasi dirasa kurang, mohon untuk konfirmasi langsung ke RS Islam Aysha atau melalui whatsapp admin pada nomor 0812-6126-2822.\" "
+    #     "namun apabila jawaban dari pertanyaan ada dalam konteks maka, jangan mengirimkan pesan tadi. "
+    #     "Apabila terdapat kalimat sapaan seperti halo, hai, assalamualaikum dan yang lainnya, jawab dengan benar, bisa juga dengan ditambahkan emoticon senyum. "
+    #     "Setiap selesai menjawab pertanyaan tawari kembali pengguna apabila masih ada yang bisa dibantu. "
+    #     "jangan memunculkan karakter khusus diluar tanda baca dalam menjawab pertanyaan."
+    #     "Setiap jawaban wajib dan harus diakhiri dengan ucapan \"terimakasih telah menghubungi Rumah Sakit Islam Aysha. - ShaCare\"\n\n"
+    #     f"Pertanyaan: {user_question}"
+    # )
+
+    pass_conversation= f"""
+    Apabila informasi dirasa kurang memuaskan, mohon untuk konfirmasi langsung ke RS Islam Aysha atau melalui WA admin pada nomor 0812-6126-2822.
+    """
+
+    thanks_conversation= f"""
+    Terimakasih telah menghubungi Rumah Sakit Islam Aysha.
+    """
+
+    # prompt = f"""
+    # Jawab semua pertanyaan menggunakan bahasa Indonesia. \
+    # Apabila terdapat kalimat sapaan seperti halo, hai, assalamualaikum dan yang lainnya, jawab dengan benar, bisa juga dengan ditambahkan emoticon senyum. \
+    # Setiap selesai menjawab pertanyaan tawari kembali pengguna apabila masih ada yang bisa dibantu. \
+    # jangan memunculkan karakter khusus diluar tanda baca dalam menjawab pertanyaan. \
+    # Setiap jawaban wajib dan harus diakhiri dengan ucapan : {thanks_conversation} \
+    # Jika jawaban tidak ditemukan dalam konteks (dalam artian diluar konteks informasi), jangan coba-coba memberikan informasi lain yang tidak dipercaya sumbernya.
+    # Cukup jawab dengan apa yang ada dalam konteks dan pada kalimat terakhir tambahkan : {pass_conversation} \
+    # namun apabila jawaban dari pertanyaan ada dalam konteks maka, jangan mengirimkan pesan :  {pass_conversation}  . \
+
+    # Pertanyaan :  \
+    # ```{user_question}```
+    # """
+
+    prompt = f"""
+    Jawab semua pertanyaan menggunakan bahasa Indonesia. \
+    Apabila terdapat kalimat sapaan seperti halo, hai, assalamualaikum dan yang lainnya, jawab dengan benar, bisa juga dengan ditambahkan emoticon senyum. \
+    Setiap selesai menjawab pertanyaan tawari kembali pengguna apabila masih ada yang bisa dibantu. \
+    dilarang memunculkan karakter khusus diluar tanda baca dalam menjawab pertanyaan. \
+    jangan lupa, Setiap jawaban wajib dan harus diakhiri dengan ucapan  'Terimakasih telah menghubungi Rumah Sakit Islam Aysha. \
+
+    Pertanyaan :  \
+    ```{user_question}```
+    """
+
     
     bill = None
     with get_openai_callback() as cb:
-        response = chain.run(input_documents=docs, question=user_question)
+        response = chain.run(input_documents=docs, question=prompt)
         print(cb)
         bill = cb.total_cost
         
-    return {"response": response, "docs": docs, "bill": bill}
+    return {"question":question, "response": response, "docs": docs, "bill": bill}
+
+
+@app.post("/question_answer_with_score/")
+async def question_answer_with_score(question: Question):
+    user_question = question.question
+    llm = OpenAI()
+    chain = load_qa_chain(llm, chain_type="stuff")
+    # untuk skor kesamaan umum
+    docs = vector_store.similarity_search_with_score(user_question)
+        
+    return {"docs": docs}
+
+
+@app.post("/question_answer_with_relevance_score/")
+async def question_answer_with_relevance_score(question: Question):
+    user_question = question.question
+    llm = OpenAI()
+    chain = load_qa_chain(llm, chain_type="stuff")
+    # untuk lebih fokus pada relevansi
+    docs = vector_store.similarity_search_with_relevance_scores(user_question)
+        
+    return {"docs": docs}
