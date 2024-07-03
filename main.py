@@ -310,7 +310,7 @@ async def question_answer(question: Question):
 #     # return {"question":question, "response": response, "docs": docs, "bill": bill}
 
 
-@app.post("/question_answe_with_prompt/")
+@app.post("/question_answer_with_prompt/")
 async def question_answer_with_prompt(question: Question):
     # if knowledge_base is None:
     #     return {"response": "Error! Knowledge base is not available yet. Please upload a file first."}
@@ -405,3 +405,8 @@ async def question_answer_with_relevance_score(question: Question):
     docs = vector_store.similarity_search_with_relevance_scores(user_question)
         
     return {"docs": docs}
+
+@app.get("/count_data_in_collection/")
+async def count_data_in_collection():
+    count = vector_store._collection.count()
+    return {"count_data": count}
