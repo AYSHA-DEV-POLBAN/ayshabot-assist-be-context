@@ -246,9 +246,12 @@ async def question_answer(question: Question):
 
     docs = vector_store.similarity_search(user_question)
 
+    close_statement = "Terimakasih telah menghubungi Rumah Sakit Islam Aysha."
+
     prompt = f"""
     Jawab semua pertanyaan menggunakan bahasa Indonesia. \
-    jangan lupa, Setiap jawaban wajib dan harus diakhiri dengan ucapan  'Terimakasih telah menghubungi Rumah Sakit Islam Aysha. \
+    Jika pertanyaan ataupun jawaban mengandung konteks menunjukan harga, menunjukan tarif, menunjukan jadwal dokter, nama hari, menunjukan pukul waktu, menunjukan tanggal, menunjukan nominal,  maka tambahkan ucapan : 'Informasi yang diberikan dapat berubah sewaktu-waktu' sebelum ucapan  penutup : '{close_statement}' \
+    Jangan lupa, Setiap jawaban wajib dan harus diakhiri dengan ucapan penutup : '{close_statement}' \
 
     Pertanyaan :  \
     ```{user_question}```
